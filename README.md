@@ -8,6 +8,19 @@ The general idea is that as Azure SQL Server adoption grows, there will be more 
 
 At its core, SQLC2 is just a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements.  Although this blog focuses on using an Azure SQL Server instance, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
 
+#Basic Setup
+* **Option 1:** Download the script and import it.  This does not require administrative privileges and will only be imported into the current session.  However, it may be blocked by restrictive execution policies, so you may want to use the bypass option.
+    `Set-ExecutionPolicy Bypass -Scope Process`
+    `Import-Module SQLC2.psm1`
+    
+* **Option 2:** Load it into a session via a download cradle.  This does not require administrative privileges and will only be imported into the current session.  It should not be blocked by executions policies.
+
+    `IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/PowerUpSQL/master/PowerUpSQL.ps1")`
+
+     **Note:** To run as an alternative domain user, use the runas command to launch PowerShell first. 
+
+    `runas /noprofile /netonly /user:domain\user PowerShell.exe`
+
 # User Functions
 Below is a list of user functions that support the intended workflows.  
 For more information and a walkthrough of how to get started with SQLC2 setup check out the blog at https://blog.netspi.com/.
