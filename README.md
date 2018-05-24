@@ -24,7 +24,7 @@ Below is a list of user functions that support the intended workflows.  For more
 |Uninstall-SQLC2AgentPs|Uninstall all operating system based persistence methods.|
 |Uninstall-SQLC2Server|Remove the SQLC2 tables from the target database.|
 
-### Author, Contributors, and License
+### Author and License
 * Author: Scott Sutherland (@_nullbind), NetSPI - 2018
 * License: BSD 3-Clause
 * Required Dependencies: None
