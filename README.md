@@ -2,7 +2,7 @@
 SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.
 
 # User Functions
-Below is a list of user functions for supporting the intended workflows.  For more information check out the SQLC2 blog at https://blog.netspi.com/.
+Below is a list of user functions that support the intended workflows.  For more information check out the SQLC2 blog at https://blog.netspi.com/.
 
 |Function Name|Description |
 |:--------------------------------|:-----------|
