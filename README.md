@@ -7,7 +7,8 @@ More companies are starting to use Azure SQL Server databases. When those Azure 
 So, the general idea is that as Azure SQL Server adoption grows, there will be more opportunity to use SQL Server as a control channel during pentests that looks kind of like normal traffic.  SQLPS is a pretty basic proof of concept, but I think it’s functional enough to illustrate the idea. I know there are quite a few improvements to be made, but if you end up playing with it, I’d love to hear any feedback you have. 
 
 # User Functions
-Below is a list of user functions that support the intended workflows.  For more information check out the SQLC2 blog at https://blog.netspi.com/.
+Below is a list of user functions that support the intended workflows.  
+For more information and a walkthrough of how to get started with SQLC2 setup check out the blog at https://blog.netspi.com/.
 
 |Function Name|Description |
 |:--------------------------------|:-----------|
