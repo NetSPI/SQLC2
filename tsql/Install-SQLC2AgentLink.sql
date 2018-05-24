@@ -1,3 +1,8 @@
+-- You can do a find and replace on the following values to get things rolling:
+-- C2INSTANCEHERE
+-- C2DATABASEHERE
+-- C2USERNAMEHERE
+-- C2PASSWORDHERE
 
 -----------------------------------
 -- Create Server Link to C2
