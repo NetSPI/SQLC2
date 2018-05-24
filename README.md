@@ -15,7 +15,7 @@ At its core, SQLC2 is just a few tables in an SQL Server instance that tracks ag
     
 * **Option 2:** Load it into a session via a download cradle.  This does not require administrative privileges and will only be imported into the current session.  It should not be blocked by executions policies.
 
-    `IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/PowerUpSQL/master/PowerUpSQL.ps1")`
+    `IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/SQLC2/master/SQLC2.psm1")`
 
      **Note:** To run as an alternative domain user, use the runas command to launch PowerShell first. 
 
