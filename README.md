@@ -31,20 +31,16 @@ For more information and a walkthrough of how to get started with SQLC2 setup ch
 Below are a few sample screenshots.
 
 Install SQLC2 Server (Create tables):
-![Install C2](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Server.png)
-<br> 
+![Install C2](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Server.png) 
 
 Install SQLC2 Agent (SQL Server agent Job that uses a server link):
 ![Install Agent](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Link_Agent.png)       
-<br> 
 
 Set Command to Run on Agent:
-![Set_Command](https://github.com/NetSPI/SQLC2/blob/master/images/Set%20Command%20to%20Run%20on%20Agent.png)       
-<br> 
+![Set_Command](https://github.com/NetSPI/SQLC2/blob/master/images/Set%20Command%20to%20Run%20on%20Agent.png)        
 
 Get Command Output:
 ![Get Command Output](https://github.com/NetSPI/SQLC2/blob/master/images/List%20execute%20agent%20commands.png)       
-<br> 
 
 ### Author and License
 * Author: Scott Sutherland (@_nullbind), NetSPI - 2018
