@@ -27,6 +27,14 @@ For more information and a walkthrough of how to get started with SQLC2 setup ch
 |Uninstall-SQLC2AgentPs|Uninstall all operating system based persistence methods.|
 |Uninstall-SQLC2Server|Remove the SQLC2 tables from the target database.|
 
+# Screen Shots
+
+Install SQLC2 Server
+
+Install SQLC2 Agent
+
+Recover Commands Executed
+
 ### Author and License
 * Author: Scott Sutherland (@_nullbind), NetSPI - 2018
 * License: BSD 3-Clause
