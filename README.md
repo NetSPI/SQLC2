@@ -1,11 +1,6 @@
 # SQLC2
 SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.
 
-### Author, Contributors, and License
-* Author: Scott Sutherland (@_nullbind), NetSPI - 2018
-* License: BSD 3-Clause
-* Required Dependencies: None
-
 # User Functions
 Below is a list of user functions for supporting the intended workflows.  For more information check out the SQLC2 blog at https://blog.netspi.com/.
 
@@ -24,4 +19,7 @@ Below is a list of user functions for supporting the intended workflows.  For mo
 |Uninstall-SQLC2AgentPs|Uninstall all operating system based persistence methods.|
 |Uninstall-SQLC2Server|Remove the SQLC2 tables from the target database.|
 
-
+### Author, Contributors, and License
+* Author: Scott Sutherland (@_nullbind), NetSPI - 2018
+* License: BSD 3-Clause
+* Required Dependencies: None
