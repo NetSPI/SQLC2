@@ -12,6 +12,7 @@ At its core, SQLC2 is just a few tables in an SQL Server instance that tracks ag
 * **Option 1:** Download the script and import it.  This does not require administrative privileges and will only be imported into the current session.  However, it may be blocked by restrictive execution policies, so you may want to use the bypass option.
 
     `Set-ExecutionPolicy Bypass -Scope Process`
+    
     `Import-Module SQLC2.psm1`
     
 * **Option 2:** Load it into a session via a download cradle.  This does not require administrative privileges and will only be imported into the current session.  It should not be blocked by executions policies.
