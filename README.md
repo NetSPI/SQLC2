@@ -6,8 +6,8 @@ SQLC2 is a PowerShell script for deploying and managing a command and control sy
 * License: BSD 3-Clause
 * Required Dependencies: None
 
-# Functions
-The current functions list includes:
+# User Functions
+Below is a list of user functions for supporting the intended workflows.  For more information check out the SQLC2 blog at https://blog.netspi.com/.
 
 |Function Name|Description |
 |:--------------------------------|:-----------|
