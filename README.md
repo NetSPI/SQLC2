@@ -4,7 +4,9 @@ SQLC2 is a PowerShell script for deploying and managing a command and control sy
 # Why Bother with a SQL Server Based C2?
 More companies are starting to use Azure SQL Server databases. When those Azure SQL Server instances are created, they are made accessible via a subdomain of database.windows.net on port 1433. For example, I could create SQL Server instance named "mysupersqlserver.database.windows.net". As a result, some corporate network configurations allow outbound internet access to any "database.windows.net" subdomain on port 1433. 
 
-So, the general idea is that as Azure SQL Server adoption grows, there will be more opportunity to use SQL Server as a control channel that looks kind of like normal traffic.  SQLPS is a pretty basic proof of concept, but I think it’s functional enough to illustrate the idea. I know there are quite a few improvements to be made, but if you end up playing with it, I’d love to hear any feedback you have. 
+The general idea is that as Azure SQL Server adoption grows, there will be more opportunity to use SQL Server as a control channel that looks kind of like normal traffic.  SQLPS is a pretty basic proof of concept, but I think it’s functional enough to illustrate the idea. I know there are quite a few improvements to be made, but if you end up playing with it, I’d love to hear any feedback you have.
+
+At its core, SQLC2 is just a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements.  Although this blog focuses on using an Azure SQL Server instance, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
 
 # User Functions
 Below is a list of user functions that support the intended workflows.  
