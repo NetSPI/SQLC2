@@ -1,5 +1,5 @@
 # SQLC2
-SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.
+SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.  For more information and a walkthrough of how to get started with SQLC2 setup check out the blog at https://blog.netspi.com/.
 
 # Why Bother with a SQL Server Based C2?
 More companies are starting to use Azure SQL Server databases. When those Azure SQL Server instances are created, they are made accessible via a subdomain of database.windows.net on port 1433. For example, I could create SQL Server instance named "mysupersqlserver.database.windows.net". As a result, some corporate network configurations allow outbound internet access to any "database.windows.net" subdomain on port 1433. 
@@ -23,7 +23,6 @@ At its core, SQLC2 is just a few tables in an SQL Server instance that tracks ag
 
 # User Functions
 Below is a list of user functions that support the intended workflows.  
-For more information and a walkthrough of how to get started with SQLC2 setup check out the blog at https://blog.netspi.com/.
 
 |Function Name|Description |
 |:--------------------------------|:-----------|
