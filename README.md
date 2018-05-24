@@ -8,7 +8,7 @@ The general idea is that as Azure SQL Server adoption grows, there will be more 
 
 At its core, SQLC2 is just a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements.  Although this blog focuses on using an Azure SQL Server instance, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
 
-#Basic Setup
+# Loading SQLC2
 * **Option 1:** Download the script and import it.  This does not require administrative privileges and will only be imported into the current session.  However, it may be blocked by restrictive execution policies, so you may want to use the bypass option.
     `Set-ExecutionPolicy Bypass -Scope Process`
     `Import-Module SQLC2.psm1`
