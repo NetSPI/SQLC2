@@ -6,7 +6,7 @@
 USE [master]
 GO
 
--- Create Server Link C2 Server 
+		    -- Create Server Link C2 Server 
                     IF (SELECT count(*) FROM master..sysservers WHERE srvname = 'C2INSTANCEHERE') = 0
                     EXEC master.dbo.sp_addlinkedserver @server = N'C2INSTANCEHERE', 
                     @srvproduct=N'', 
@@ -40,7 +40,7 @@ GO
 
 
 -----------------------------------
--- Create Agent Job
+-- Create TSQL Agent Job
 -----------------------------------
 
 USE [msdb]
