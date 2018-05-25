@@ -21,11 +21,11 @@ Although there is an emphasis on using SQLC2 with Azure SQL Server instances, yo
 
     `Set-ExecutionPolicy Bypass -Scope Process`
     
-    `Import-Module SQLC2.psm1`
+    `Import-Module SQLC2.ps1`
     
 * **Option 2:** Load it into a session via a download cradle.  This does not require administrative privileges and will only be imported into the current session.  It should not be blocked by executions policies.
 
-    `IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/SQLC2/master/SQLC2.psm1")`
+    `IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/SQLC2/master/SQLC2.ps1")`
 
      **Note:** To run as an alternative domain user, use the runas command to launch PowerShell first. 
 
