@@ -13,7 +13,7 @@ More companies are starting to use Azure SQL Server databases. When those Azure 
 
 The general idea is that as Azure SQL Server adoption grows, there will be more opportunity to use SQL Server as a control channel that looks kind of like normal traffic.  SQLPS is a pretty basic proof of concept, but I think it’s functional enough to illustrate the idea. I know there are quite a few improvements to be made, but if you end up playing with it, I’d love your feedback.
 
-##Not Just for Azure
+### Not Just for Azure
 Although there is an emphasis on using it with Azure SQL Server instances, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
 
 # Loading SQLC2
