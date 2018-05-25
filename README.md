@@ -1,5 +1,7 @@
 # SQLC2
-SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.  For more information and a walkthrough of how to get started with SQLC2 setup check out the blog at https://blog.netspi.com/.
+SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.  At its core, SQLC2 is just a PowerShell script, a TSQL script, and a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements. 
+
+For a more complete overview of SQLC2 check out the blog at https://blog.netspi.com/.
 
 ### Author and License
 * Author: Scott Sutherland (@_nullbind), NetSPI - 2018
@@ -11,7 +13,7 @@ More companies are starting to use Azure SQL Server databases. When those Azure 
 
 The general idea is that as Azure SQL Server adoption grows, there will be more opportunity to use SQL Server as a control channel that looks kind of like normal traffic.  SQLPS is a pretty basic proof of concept, but I think it’s functional enough to illustrate the idea. I know there are quite a few improvements to be made, but if you end up playing with it, I’d love to hear any feedback you have.
 
-At its core, SQLC2 is just a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements.  Although this blog focuses on using an Azure SQL Server instance, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
+ Although there is an emphasis on using it with Azure SQL Server instances, you could host your own SQL Server in any cloud environment and have it listen on port 443 with SSL enabled. So, it could offer a little more flexibility depending on how much effort you want to put into it.
 
 # Loading SQLC2
 * **Option 1:** Download the script and import it.  This does not require administrative privileges and will only be imported into the current session.  However, it may be blocked by restrictive execution policies, so you may want to use the bypass option.
