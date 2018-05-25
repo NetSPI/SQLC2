@@ -9,7 +9,6 @@
 		     and command grabbing from the C2 SQL Server.
 	Author:  Scott Sutherland (@_nullbind), NetSPI 2018
 	License: BSD 3-Clause
-	Mini Guide:
 #>
 
 
