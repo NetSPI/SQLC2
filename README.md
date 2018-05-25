@@ -22,6 +22,9 @@ At its core, SQLC2 is just a few tables in an SQL Server instance that tracks ag
      **Note:** To run as an alternative domain user, use the runas command to launch PowerShell first. 
 
     `runas /noprofile /netonly /user:domain\user PowerShell.exe`
+    
+# Basic SQLC2 architecture diagram
+https://github.com/NetSPI/SQLC2/blob/master/images/arch.png
 
 # User Functions
 Below is a list of user functions that support the intended workflows.  
@@ -45,15 +48,22 @@ Below is a list of user functions that support the intended workflows.
 Below are a few sample screenshots.
 
 Install SQLC2 Server (Create tables):
+Install-SQLC2Server -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!'
 ![Install C2](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Server.png) 
 
 Install SQLC2 Agent (SQL Server agent Job that uses a server link):
-![Install Agent](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Link_Agent.png)       
+Install-SQLC2AgentPs -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!'
+![Install Agent](https://github.com/NetSPI/SQLC2/blob/master/images/Install_SQLC2_Link_Agent.png)  
+
+View SQLC2 Agents:
+Get-SQLC2Agent -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!'
 
 Set Command to Run on Agent:
+Set-SQLC2Command -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!' -Command "Whoami" -ServerName MSSQLSRV04
 ![Set_Command](https://github.com/NetSPI/SQLC2/blob/master/images/Set%20Command%20to%20Run%20on%20Agent.png)        
 
-Get Command Output:
+Get Command Results:
+Get-SQLC2Result -Verbose -ServerName "MSSQLSRV04" -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!'
 ![Get Command Output](https://github.com/NetSPI/SQLC2/blob/master/images/List%20execute%20agent%20commands.png)       
 
 ### Author and License
