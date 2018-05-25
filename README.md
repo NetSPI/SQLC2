@@ -24,7 +24,7 @@ At its core, SQLC2 is just a few tables in an SQL Server instance that tracks ag
     `runas /noprofile /netonly /user:domain\user PowerShell.exe`
     
 # Basic SQLC2 architecture diagram
-https://github.com/NetSPI/SQLC2/blob/master/images/arch.png
+![SQLC2Arch](https://github.com/NetSPI/SQLC2/blob/master/images/arch.png) 
 
 # User Functions
 Below is a list of user functions that support the intended workflows.  
@@ -57,6 +57,7 @@ Install-SQLC2AgentPs -Verbose -Instance sqlserverc21.database.windows.net -Datab
 
 View SQLC2 Agents:
 Get-SQLC2Agent -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!'
+![SQLC2Arch](https://github.com/NetSPI/SQLC2/blob/master/images/Get-Command-Results.png) 
 
 Set Command to Run on Agent:
 Set-SQLC2Command -Verbose -Instance sqlserverc21.database.windows.net -Database test1 -Username CloudAdmin -Password 'BestPasswordEver!' -Command "Whoami" -ServerName MSSQLSRV04
