@@ -1,4 +1,4 @@
-# SQLC2
+# <bold>SQL</bold>C2
 SQLC2 is a PowerShell script for deploying and managing a command and control system that uses SQL Server as both the control server and the agent.  At its core, SQLC2 is just a PowerShell script, a TSQL script, and a few tables in an SQL Server instance that tracks agents, commands, and results. Nothing too fancy, but it may prove to be useful on some engagements. 
 
 For a more complete overview of SQLC2 check out the blog at https://blog.netspi.com/databases-and-clouds-sql-server-as-a-c2/.
