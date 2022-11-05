@@ -2,7 +2,7 @@
 
 Author: Scott Sutherland, NetSPI (2018)
 Application: SQLC2CMDS.dll
-Version: 1.2
+Version: 1.3
 Description: 
 
 This .net DLL is intended to be imported into SQL Server and used during post exploitation activies.  
@@ -458,18 +458,20 @@ public partial class StoredProcedures
         try
         {
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2","SELECT * FROM Win32_Process");
-            
+
+            // Create the record and specify the metadata for the columns.
+            SqlDataRecord record = new SqlDataRecord(new SqlMetaData("Pid", SqlDbType.NVarChar, 4000),
+                                   new SqlMetaData("Name", SqlDbType.NVarChar, 4000),
+                                   new SqlMetaData("Path", SqlDbType.NVarChar, 4000),
+                                   new SqlMetaData("CommandLine", SqlDbType.NVarChar, 4000));
+
+            // Mark the begining of the result-set.
+            SqlContext.Pipe.SendResultsStart(record);
+
             foreach (ManagementObject queryObj in searcher.Get())
             {
                 
-                // Create the record and specify the metadata for the columns.
-                SqlDataRecord record = new SqlDataRecord(new SqlMetaData("Pid", SqlDbType.NVarChar, 4000),
-                                       new SqlMetaData("Name", SqlDbType.NVarChar, 4000),    
-                                       new SqlMetaData("Path", SqlDbType.NVarChar, 4000),
-                                       new SqlMetaData("CommandLine", SqlDbType.NVarChar, 4000));
-              
-                  // Mark the begining of the result-set.
-                  SqlContext.Pipe.SendResultsStart(record);
+
                 /*
                 // Set values for each column in the row using the structure
                 record.SetString(0, queryObj["ProcessId"].ToString());
@@ -480,10 +482,12 @@ public partial class StoredProcedures
                 // Send the row back to the client.
                 SqlContext.Pipe.SendResultsRow(record);
 
-                // Mark the end of the result-set.
-                SqlContext.Pipe.SendResultsEnd();
+
               */
             }
+
+            // Mark the end of the result-set.
+            SqlContext.Pipe.SendResultsEnd();
         }
         catch (ManagementException e)
         {
