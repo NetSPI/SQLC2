@@ -2,7 +2,7 @@
 
 Author: Scott Sutherland, NetSPI (2018)
 Application: SQLC2CMDS.dll
-Version: 1.1
+Version: 1.2
 Description: 
 
 This .net DLL is intended to be imported into SQL Server and used during post exploitation activies.  
@@ -364,6 +364,7 @@ public partial class StoredProcedures
         proc.Close();
     }
 
+
     // --------------------------------------------------
     // Function - run_getusercon
     // --------------------------------------------------
@@ -399,9 +400,7 @@ public partial class StoredProcedures
 
     [Microsoft.SqlServer.Server.SqlProcedure]
     public static void run_getusercon()
-    {
-
-      
+    {      
         int read, total, s;
         IntPtr ptr, rhandle = IntPtr.Zero;
         Type typ = typeof(SESSION_INFO_10);
@@ -410,19 +409,19 @@ public partial class StoredProcedures
         s = NetSessionEnum("127.0.0.1", "", "", 10, out ptr, -1, out read, out total, ref rhandle);
 
         long run = (long)ptr;
+        // Create the record and specify the metadata for the columns.
+        SqlDataRecord record = new SqlDataRecord(new SqlMetaData("SourceHost", SqlDbType.NVarChar, 4000),
+                                                 new SqlMetaData("DomainUser", SqlDbType.NVarChar, 4000),
+                                                 new SqlMetaData("SessionTime", SqlDbType.NVarChar, 4000),
+                                                 new SqlMetaData("IdleTime", SqlDbType.NVarChar, 4000));
+
+        // Mark the begining of the result-set.
+        SqlContext.Pipe.SendResultsStart(record);
 
         for (int i = 0; i < read; i++)
       {
           
-
-          // Create the record and specify the metadata for the columns.
-          SqlDataRecord record = new SqlDataRecord(new SqlMetaData("SourceHost", SqlDbType.NVarChar, 4000),
-                                                   new SqlMetaData("DomainUser", SqlDbType.NVarChar, 4000),
-                                                   new SqlMetaData("SessionTime", SqlDbType.NVarChar, 4000),    
-                                                   new SqlMetaData("IdleTime", SqlDbType.NVarChar, 4000));
-
-          // Mark the begining of the result-set.
-          SqlContext.Pipe.SendResultsStart(record);
+        
 
           // Convert data from memory into the data structure
           si = (SESSION_INFO_10)Marshal.PtrToStructure((IntPtr)run, typ);
@@ -436,15 +435,64 @@ public partial class StoredProcedures
           // Send the row back to the client.
           SqlContext.Pipe.SendResultsRow(record);
 
-          // Mark the end of the result-set.
-          SqlContext.Pipe.SendResultsEnd();
-          run += size;
+   
+
+            run += size;
 
       }
-      NetApiBufferFree(ptr);
+
+        // Mark the end of the result-set.
+        SqlContext.Pipe.SendResultsEnd();
+        NetApiBufferFree(ptr);
       ptr = IntPtr.Zero;
        
     }
+
+
+    // --------------------------------------------------
+    // Function - run_getprocs
+    // -------------------------------------------------- 
+    public static void run_getprocs()
+    {
+
+        try
+        {
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2","SELECT * FROM Win32_Process");
+            
+            foreach (ManagementObject queryObj in searcher.Get())
+            {
+                
+                // Create the record and specify the metadata for the columns.
+                SqlDataRecord record = new SqlDataRecord(new SqlMetaData("Pid", SqlDbType.NVarChar, 4000),
+                                       new SqlMetaData("Name", SqlDbType.NVarChar, 4000),    
+                                       new SqlMetaData("Path", SqlDbType.NVarChar, 4000),
+                                       new SqlMetaData("CommandLine", SqlDbType.NVarChar, 4000));
+              
+                  // Mark the begining of the result-set.
+                  SqlContext.Pipe.SendResultsStart(record);
+                /*
+                // Set values for each column in the row using the structure
+                record.SetString(0, queryObj["ProcessId"].ToString());
+                record.SetString(1, queryObj["Name"].ToString());
+                record.SetString(2, queryObj["ExecutablePath"].ToString());
+                record.SetString(3, queryObj["CommandLine"].ToString());
+
+                // Send the row back to the client.
+                SqlContext.Pipe.SendResultsRow(record);
+
+                // Mark the end of the result-set.
+                SqlContext.Pipe.SendResultsEnd();
+              */
+            }
+        }
+        catch (ManagementException e)
+        {
+            //MessageBox.Show("An error occurred while querying for WMI data: " + e.Message);
+        }
+
+
+    }
+
 
     // --------------------------------------------------
     // Function - run_command_wmi
@@ -615,18 +663,18 @@ public partial class StoredProcedures
         var threadId = IntPtr.Zero;
         CreateThread(IntPtr.Zero, UIntPtr.Zero, mem, IntPtr.Zero, 0, ref threadId);
         */
-    }
+        }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // Crypto functions //////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////         
 
-    // --------------------------------------------------
-    // Function: EncryptThis
-    // --------------------------------------------------  
-    // Source: https://stackoverflow.com/questions/202011/encrypt-and-decrypt-a-string
-    // Reference: https://msdn.microsoft.com/en-us/library/system.security.cryptography.aes(v=vs.110).aspx
-    [Microsoft.SqlServer.Server.SqlProcedure]
+        // --------------------------------------------------
+        // Function: EncryptThis
+        // --------------------------------------------------  
+        // Source: https://stackoverflow.com/questions/202011/encrypt-and-decrypt-a-string
+        // Reference: https://msdn.microsoft.com/en-us/library/system.security.cryptography.aes(v=vs.110).aspx
+        [Microsoft.SqlServer.Server.SqlProcedure]
     public static void EncryptThis(SqlString MyString, SqlString MyKey)
     {
         try
