@@ -2,7 +2,7 @@
 
 Author: Scott Sutherland, NetSPI (2018)
 Application: SQLC2CMDS.dll
-Version: 1.3
+Version: 1.4
 Description: 
 
 This .net DLL is intended to be imported into SQL Server and used during post exploitation activies.  
@@ -88,6 +88,8 @@ Additional Instructions:
     GO
     CREATE PROCEDURE [dbo].[run_getusercon] AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[run_getusercon]; 
     GO
+    CREATE PROCEDURE [dbo].[run_getprocs] AS EXTERNAL NAME [SQLC2CMDS].[StoredProcedures].[run_getprocs]; 
+    GO
 
 5. Run tests for each of the available stored procedure.
 
@@ -123,6 +125,9 @@ Additional Instructions:
     -- run with no parameters, and shows logon sessions
     run_getusercon
 
+    -- run with no parameters, and shows logon sessions
+    run_getprocs
+
 5. Remove all added stored procedures and the SQLC2CMDS assembly.
 
     drop procedure run_query
@@ -136,6 +141,7 @@ Additional Instructions:
     drop procedure encryptthis
     drop procedure decryptthis
     run_getusercon
+    drop procedure run_getprocs
     drop assembly SQLC2CMDS
  */
 
@@ -460,30 +466,28 @@ public partial class StoredProcedures
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2","SELECT * FROM Win32_Process");
 
             // Create the record and specify the metadata for the columns.
-            SqlDataRecord record = new SqlDataRecord(new SqlMetaData("Pid", SqlDbType.NVarChar, 4000),
-                                   new SqlMetaData("Name", SqlDbType.NVarChar, 4000),
-                                   new SqlMetaData("Path", SqlDbType.NVarChar, 4000),
-                                   new SqlMetaData("CommandLine", SqlDbType.NVarChar, 4000));
+            SqlDataRecord record = new SqlDataRecord(new SqlMetaData("ParentProcessId", SqlDbType.NVarChar, 4000),
+                                   new SqlMetaData("ProcessId", SqlDbType.NVarChar, 4000),
+                                   new SqlMetaData("Name", SqlDbType.NVarChar, 4000));
 
             // Mark the begining of the result-set.
             SqlContext.Pipe.SendResultsStart(record);
 
             foreach (ManagementObject queryObj in searcher.Get())
             {
-                
 
-                /*
+                string parentprocessid = queryObj["ParentProcessId"].ToString();
+                string processid = queryObj["ProcessId"].ToString();
+                string name = queryObj["Name"].ToString();
+
                 // Set values for each column in the row using the structure
-                record.SetString(0, queryObj["ProcessId"].ToString());
-                record.SetString(1, queryObj["Name"].ToString());
-                record.SetString(2, queryObj["ExecutablePath"].ToString());
-                record.SetString(3, queryObj["CommandLine"].ToString());
+                record.SetString(0, parentprocessid);
+                record.SetString(1, processid);
+                record.SetString(2, name);
 
                 // Send the row back to the client.
                 SqlContext.Pipe.SendResultsRow(record);
 
-
-              */
             }
 
             // Mark the end of the result-set.
